@@ -1,4 +1,5 @@
 defmodule MerkleTree.Core do
+  alias MerkleTree.Node
   defstruct [:pieces, :root, :hash_function]
 
   @number_of_children 2
@@ -35,7 +36,7 @@ defmodule MerkleTree.Core do
   def build(pieces, hash_function \\ nil)
   def build(pieces, hash_function) when is_function(hash_function) do
     leaves = Enum.map(pieces, fn(piece) ->
-      %MerkleTree.Node{
+      %Node{
         value: hash_function.(piece),
         data: piece,
         children: []
@@ -52,7 +53,7 @@ defmodule MerkleTree.Core do
       concat = partition
       |> Enum.map(&(&1.value))
       |> Enum.reduce("", fn(acc, x) -> acc <> x end)
-      %MerkleTree.Node{
+      %Node{
         value: hash_function.(concat),
         children: partition,
       }
@@ -69,17 +70,31 @@ defmodule MerkleTree.Core do
 
   @spec reconstruct([root]) :: [charlist()]
   def reconstruct([]), do: []
-  def reconstruct([%MerkleTree.Node{:children => [], :data => data} | tail]) do
+  def reconstruct([%Node{:children => [], :data => data} | tail]) do
     [data | reconstruct(tail)]
   end
-  def reconstruct([%MerkleTree.Node{:children => children, :data => nil} | tail]) do
+  def reconstruct([%Node{:children => children, :data => nil} | tail]) do
     reconstruct(children++tail)
   end
 
-  @spec verify([root], [root]) :: Boolean
-  def verify([%MerkleTree.Node{:value => value1} | _],
-             [%MerkleTree.Node{:value => value2} | _]) do
-    value1 == value2
-  end
+  @spec verify(root, root) :: Boolean
+  def verify(%Node{:value => value1},
+             %Node{:value => value2}), do: value1 == value2
 
+  @spec synchronize(root, root) :: root
+  def synchronize(%Node{:children => []}, root2), do: root2
+  def synchronize(%Node{:children => [left1 | [right1]]}, root2) do
+    [left2| [right2]] = root2.children
+    if left1.value != left2.value do
+      if right1.value != right2.value do
+        root2
+      else
+        synchronize(left1, left2)
+      end
+    else
+      if right1.value != right2.value do
+        synchronize(right1, right2)
+      end
+    end
+  end
 end
