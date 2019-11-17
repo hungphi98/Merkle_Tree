@@ -24,6 +24,7 @@ defmodule MerkleTree.Core do
     path
     |> File.ls!
     |> Enum.filter(fn(filename) -> String.match?(filename, ~r/^x/) == true end)
+    |> Enum.sort()
     |> Enum.map(fn(filename) -> File.read!(Path.join(path, filename)) end)
     |> build(hash_function)
   end
@@ -40,7 +41,6 @@ defmodule MerkleTree.Core do
         children: []
         }
       end)
-    IO.inspect(leaves)
     build_tree(leaves, hash_function)
   end
 
@@ -69,10 +69,11 @@ defmodule MerkleTree.Core do
 
   @spec reconstruct([root]) :: [charlist()]
   def reconstruct([]), do: []
-  def reconstruct([%MerkleTree.Node{:data => data} | tail]) do
+  def reconstruct([%MerkleTree.Node{:children => [], :data => data} | tail]) do
+    IO.inspect(data)
     [data | reconstruct(tail)]
   end
-  def reconstruct([%MerkleTree.Node{:children => children} | tail]) do
+  def reconstruct([%MerkleTree.Node{:children => children, :data => nil} | tail]) do
     reconstruct(children++tail)
   end
 

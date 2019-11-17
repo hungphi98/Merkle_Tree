@@ -8,7 +8,7 @@ defmodule MerkleTree do
     GenServer.call(pid, {:serialize, path})
   end
 
-  def deserialize(pid, root) do
-    GenServer.call(pid, {:deserialize, root})
+  def deserialize(pid, path, root) do
+    GenServer.call(pid, {:deserialize, path, root})
   end
 end

@@ -15,12 +15,15 @@ defmodule MerkleTree.Server do
     abs_path =
       path
       |> Path.expand(__DIR__)
-    root = Core.build_tree(abs_path, &Crypto.sha256/1)
-    {:reply, root}
+    root = Core.serialize(abs_path, &Crypto.sha256/1)
+    {:reply, root, state}
   end
 
-  def handle_call({:deserialize, root}, _from, state) do
-
+  def handle_call({:deserialize, root, path}, _from, state) do
+    path
+    |> Path.expand(__DIR__)
+    |> Core.deserialize(root)
+    {:reply, nil, state}
   end
 
 end
