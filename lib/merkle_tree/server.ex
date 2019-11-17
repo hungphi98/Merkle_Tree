@@ -19,7 +19,7 @@ defmodule MerkleTree.Server do
     {:reply, root, state}
   end
 
-  def handle_call({:deserialize, root, path}, _from, state) do
+  def handle_call({:deserialize, path, root}, _from, state) do
     path
     |> Path.expand(__DIR__)
     |> Core.deserialize(root)

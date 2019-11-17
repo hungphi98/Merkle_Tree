@@ -12,27 +12,27 @@ defmodule MerkleTree.Core do
     hash_function: hash_function
   }
 
-  @spec new(pieces, hash_function | Keyword.t()) :: t
-  def new(pieces, hash_function \\ nil)
-  def new(pieces, hash_function) when is_function(hash_function) do
-    new(pieces, hash_function: hash_function)
-  end
-
   @spec serialize(charlist(), hash_function | Keyword.t()) :: root
   def serialize(path, hash_function \\ nil)
   def serialize(path, hash_function) when is_function(hash_function) do
-    path
+    prefix =
+      path
+      |> Path.split()
+      |> Enum.drop(-1)
+      |> Path.join()
+
+    System.cmd("gsplit", ["-b", "10KB", path, prefix <> "/x"])
+
+    prefix
     |> File.ls!
     |> Enum.filter(fn(filename) -> String.match?(filename, ~r/^x/) == true end)
     |> Enum.sort()
-    |> Enum.map(fn(filename) -> File.read!(Path.join(path, filename)) end)
+    |> Enum.map(fn(filename) -> File.read!(Path.join(prefix, filename)) end)
     |> build(hash_function)
   end
 
   @spec build(pieces, hash_function | Keyword.t()) :: root
-
   def build(pieces, hash_function \\ nil)
-
   def build(pieces, hash_function) when is_function(hash_function) do
     leaves = Enum.map(pieces, fn(piece) ->
       %MerkleTree.Node{
@@ -70,11 +70,16 @@ defmodule MerkleTree.Core do
   @spec reconstruct([root]) :: [charlist()]
   def reconstruct([]), do: []
   def reconstruct([%MerkleTree.Node{:children => [], :data => data} | tail]) do
-    IO.inspect(data)
     [data | reconstruct(tail)]
   end
   def reconstruct([%MerkleTree.Node{:children => children, :data => nil} | tail]) do
     reconstruct(children++tail)
+  end
+
+  @spec verify([root], [root]) :: Boolean
+  def verify([%MerkleTree.Node{:value => value1} | _],
+             [%MerkleTree.Node{:value => value2} | _]) do
+    value1 == value2
   end
 
 end
