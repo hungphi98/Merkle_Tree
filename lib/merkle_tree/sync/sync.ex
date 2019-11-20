@@ -1,6 +1,6 @@
 defmodule MerkleTree.Sync do
   alias MerkleTree.{Core, Crypto, Node}
-  
+
   @type pieces :: [String.t(), ...]
   @type hash_function :: (String.t() -> String.t())
   @type root :: MerkleTree.Node.t()
@@ -13,6 +13,9 @@ defmodule MerkleTree.Sync do
   @spec verify(root, root) :: Boolean
   def verify(%Node{:value => value1},
              %Node{:value => value2}), do: value1 == value2
+
+  @spec verify(charlist(), charlist()) :: Boolean
+  def verify(dir_1, dir_2), do: dir_1 == dir_2
 
   @spec synchronize(root, root) :: root
   def synchronize(%Node{:children => []}, root2), do: root2

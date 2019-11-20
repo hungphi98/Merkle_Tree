@@ -10,6 +10,22 @@ defmodule MerkleTree.FileHierarchy do
     hash_function: hash_function
   }
 
+  @spec build_directories(root, charlist()) :: nil
+  def build_directories(root, prefix) do
+    case File.ls(prefix) do
+      {:error, _} ->
+        nil
+      {:ok, []} ->
+        file_hierarchy(root, prefix)
+      {:ok, [root_dir]} ->
+        if root_dir != root.value do
+          rebuild_file_structure(root, prefix)
+        else
+          IO.puts("#{root_dir} exists")
+        end
+    end
+  end
+
   @spec file_hierarchy(root, charlist()) :: nil
   def file_hierarchy(root \\ nil, path)
   def file_hierarchy(%Node{:children => [], :data => data, :value => filename}, path) do
@@ -74,13 +90,13 @@ defmodule MerkleTree.FileHierarchy do
 
   @spec rebuild_file_structure_after_edits(charlist(), hash_function | Keyword.t()) :: t
   def rebuild_file_structure_after_edits(path, hash_function) do
-    root = rebuild_tree_after_edits(path, hash_function)
+    root = rebuild_merkle_tree(path, hash_function)
     rebuild_file_structure(root, path)
-    # root
+    root
   end
 
-  @spec rebuild_tree_after_edits(charlist(), hash_function | Keyword.t()) :: t
-  def rebuild_tree_after_edits(path, hash_function) do
+  @spec rebuild_merkle_tree(charlist(), hash_function | Keyword.t()) :: t
+  defp rebuild_merkle_tree(path, hash_function) do
     path
     |> construct_tree_from_directories
     |> Serializer.reconstruct
@@ -109,5 +125,20 @@ defmodule MerkleTree.FileHierarchy do
       construct_tree_from_directories(path <> "/#{sub}")
     end)
     %Node{:value => root, :children => children}
+  end
+
+  def is_serialized(path, hash_function) do
+    case File.ls(path) do
+      {:error, _} ->
+        false
+      {:ok, [root_dir]} ->
+        root = rebuild_merkle_tree(path, hash_function)
+        if root.value == root_dir do
+          true
+        else
+          System.cmd("rm", ["-r", path])
+          false
+        end
+    end
   end
 end

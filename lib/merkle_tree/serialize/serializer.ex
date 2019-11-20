@@ -1,5 +1,5 @@
 defmodule MerkleTree.Serializer do
-  alias MerkleTree.{Node, FileHierarchy, Crypto, Core, Utilities}
+  alias MerkleTree.{Node, FileHierarchy, Crypto, Core, Utilities, Sync}
 
   @number_of_children 2
   @type pieces :: [String.t(), ...]
@@ -11,12 +11,21 @@ defmodule MerkleTree.Serializer do
     hash_function: hash_function
   }
 
-
   @spec serialize(charlist(), hash_function | Keyword.t()) :: root
   def serialize(path, hash_function \\ nil)
   def serialize(path, hash_function) when is_function(hash_function) do
     prefix = Utilities.get_prefix(path)
+    case FileHierarchy.is_serialized(prefix, hash_function) do
+      false ->
+        _serialize(path, hash_function)
+      true ->
+        FileHierarchy.rebuild_merkle_tree(prefix, hash_function)
+    end
 
+  end
+
+  defp _serialize(path, hash_function) do
+    prefix = Utilities.get_prefix(path)
     System.cmd("mkdir", [prefix])
     System.cmd("gsplit", ["-b", "10KB", path, prefix <> "/x"])
 
@@ -28,7 +37,8 @@ defmodule MerkleTree.Serializer do
       |> build(hash_function)
 
     System.cmd("find", [prefix <> "/", "-name", "x*[a-z]*", "-delete"])
-    FileHierarchy.file_hierarchy(root, prefix)
+
+    FileHierarchy.build_directories(root, prefix)
     root
   end
 
