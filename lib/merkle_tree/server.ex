@@ -1,6 +1,6 @@
 defmodule MerkleTree.Server do
 
-  alias MerkleTree.{Core, Crypto}
+  alias MerkleTree.{Crypto, Serializer}
   use GenServer
 
   def start_link() do
@@ -15,14 +15,14 @@ defmodule MerkleTree.Server do
     abs_path =
       path
       |> Path.expand(__DIR__)
-    root = Core.serialize(abs_path, &Crypto.sha256/1)
+    root = Serializer.serialize(abs_path, &Crypto.sha256/1)
     {:reply, root, state}
   end
 
-  def handle_call({:deserialize, path, root}, _from, state) do
+  def handle_call({:deserialize, path}, _from, state) do
     path
     |> Path.expand(__DIR__)
-    |> Core.deserialize(root)
+    |> Serializer.deserialize
     {:reply, nil, state}
   end
 
